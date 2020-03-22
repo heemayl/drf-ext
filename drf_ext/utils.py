@@ -1,12 +1,16 @@
 """All standalone utilities."""
 
 
-from typing import Dict, List, TypeVar
+from typing import Dict, List, TypeVar, Union, Iterable
 
 from rest_framework.serializers import BaseSerializer
 
 
-__all__ = ["update_error_dict", "get_request_user_on_serializer"]
+__all__ = [
+    "update_error_dict",
+    "exc_dict_has_keys",
+    "get_request_user_on_serializer",
+]
 
 
 # Custom type hint(s)
@@ -36,6 +40,31 @@ def update_error_dict(
 
     errors.setdefault(field_name, []).append(message)
     return None
+
+
+def exc_dict_has_keys(exc: Exception, keys: Union[str, Iterable[str]]) -> bool:
+    """Test whether the `exc` dict has keys mentioned
+    in `keys` iterable. Returns `True` if all the keys
+    are found, otherwise returns `False`.
+
+    The `exc` would usually be `ValidationError`.
+
+    The `exc` instance must contain the `args` (tuple)
+    attribute containing the mapping of error key name
+    and description (e.g. list) values.
+
+    If `keys` is string, it is converted into an iterable.
+    """
+
+    if isinstance(keys, str):
+        keys = (keys,)
+
+    args = exc.args
+    error_args_keys = {key for arg in args if isinstance(arg, dict) for key in arg}
+
+    missing_keys = [key for key in keys if key not in error_args_keys]
+
+    return not bool(missing_keys)
 
 
 def get_request_user_on_serializer(serializer_instance: BaseSerializer) -> User:
