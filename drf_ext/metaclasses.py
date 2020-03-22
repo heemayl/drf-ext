@@ -24,7 +24,25 @@ NON_FIELD_ERRORS_KEY = "__all__"
 SerializerInstance = TypeVar("SerializerInstance")  # refers to a serializer instance
 
 
-class ExtendedSerializerMetaclass(SerializerMetaclass):
+def _get_meta_fields(cls_name: str, cls_attrs: Dict[str, Any]) -> Iterable:
+    """Return the fields defined in the `fields` attribute
+    of `Meta` class in the serializer.
+    """
+
+    try:
+        Meta = cls_attrs["Meta"]
+    except KeyError:
+        raise ValueError(f"No `Meta` class defined on {cls_name}.") from None
+
+    try:
+        meta_fields = Meta.fields
+    except AttributeError:
+        raise ValueError(
+            f'No "fields" defined on `Meta` class of {cls_name}.'
+        ) from None
+
+    return meta_fields
+
     """Custom SerializerMetaclass to:
     - provide two `Meta` options to do `required` field validations:
       - `required_fields_on_create`
