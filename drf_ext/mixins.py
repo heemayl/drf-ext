@@ -38,6 +38,13 @@ class NestedCreateUpdateMixin:
     the `_pk` field *MUST* not be made read-only, otherwise it
     will treat all nested operations as `create`. The `_pk` field
     will be pop-ed out so it's a safe operation.
+
+    The recommended way is to either use the `NestedCreateUpdateMetaclass`
+    which adds a `_pk` field transparently to all nested serializers,
+    or define the following field on each nested serializer recursively:
+
+    _pk = serializers.IntegerField(write_only=True, required=False)
+
     """
 
     @staticmethod
