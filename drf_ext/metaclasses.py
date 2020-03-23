@@ -127,6 +127,7 @@ class NestedCreateUpdateMetaclass(SerializerMetaclass):
         return super().__new__(metacls, cls_name, bases, attrs)  # type: ignore
 
 
+class ExtendedSerializerMetaclass(NestedCreateUpdateMetaclass):
     """Custom SerializerMetaclass to:
     - provide two `Meta` options to do `required` field validations:
       - `required_fields_on_create`
@@ -145,7 +146,7 @@ class NestedCreateUpdateMetaclass(SerializerMetaclass):
       `Meta.fields` is an iterable, not string `__all__` [`ALL_FIELDS`]).
       So in that case, all fields declared in `Meta.fields` are marked as
       `required=False`.
-    - Provide `common_field_params` attribute on `Meta` to add some common
+    - provide `common_field_params` attribute on `Meta` to add some common
       parameters to a set of fields. This must be a `dict` with the keys
       being an (hashable) iterable e.g. `tuple` and values being a `dict`
       of parameter-values. For example:
@@ -159,65 +160,19 @@ class NestedCreateUpdateMetaclass(SerializerMetaclass):
                           'allow_blank: False,
                       },
                   }
-    - It provides writing capabilities for nested serializers, both while
-      creating and updating (via transparently adding the `NestedCreateUpdateMixin`
-      into the bases of the created serializer class).
+    - provide nested create/update (via `NestedCreateUpdateMetaclass`)
     """
 
     def __new__(
         metacls: type, cls_name: str, bases: Tuple, attrs: Dict[str, Any]
     ) -> "ExtendedSerializerMetaclass":
 
+        cls = super().__new__(metacls, cls_name, bases, attrs)
+
+        Meta = attrs["Meta"]
+
         required_fields_on_create = required_fields_on_update = ()
         required_fields_on_create_any = required_fields_on_update_any = ()
-
-        # Inject `_pk` field
-        attrs.update(
-            _pk=IntegerField(
-                write_only=True,
-                min_value=0,
-                help_text=(
-                    "This *write-only* field is used for differentiating between "
-                    "`create` and `update` operations of nested serializers. And "
-                    "must refer to a valid primary key for the relevant nested "
-                    "serializer model to indicate that the operation on nested "
-                    "serializer is an `update` of the object referred by the given "
-                    "primary key. Otherwise, a `create` operation is performed."
-                ),
-            )
-        )
-
-        try:
-            Meta = attrs["Meta"]
-        except KeyError:
-            raise ValueError(f"No `Meta` class defined on {cls_name}.") from None
-
-        try:
-            meta_fields = Meta.fields
-        except AttributeError:
-            raise ValueError(
-                f'No "fields" defined on `Meta` class of {cls_name}.'
-            ) from None
-
-        # When `Meta.fields` is `__all__`, the `_pk` field is
-        # added via `get_default_field_names` method (see below)
-        if meta_fields != ALL_FIELDS:
-            Meta.fields = tuple(meta_fields) + ("_pk",)
-
-        # `NestedCreateUpdateMixin` should be first superclass
-        bases = (NestedCreateUpdateMixin,) + bases
-
-        cls = super().__new__(metacls, cls_name, bases, attrs)  # type: ignore
-
-        # Add `_pk` to "default_fields" when `Meta.fields` is `__all__`
-        if meta_fields == ALL_FIELDS:
-            get_default_field_names_orig = cls.get_default_field_names
-
-            def get_default_field_names(obj, *args, **kwargs):
-                default_fields = get_default_field_names_orig(obj, *args, **kwargs)
-                return default_fields + ["_pk"]
-
-            cls.get_default_field_names = get_default_field_names
 
         # This will be used to check the existence of defined
         # `Meta.non_required_fields` and `Meta.common_field_params`
