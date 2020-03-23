@@ -295,9 +295,9 @@ class NestedCreateUpdateMixin:
                 if not isinstance(field_data, Mapping):
                     continue
 
-                related_obj = getattr(instance, field_name)
+                related_obj = getattr(instance, field_name, None)
 
-                if related_obj:
+                if related_obj is not None:
                     try:
                         field_data_pk = field_data["_pk"]
                     except KeyError:
