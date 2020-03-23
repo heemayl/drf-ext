@@ -4,17 +4,30 @@ functionalities of serializers.
 
 # mypy: ignore-errors
 
-from collections.abc import Mapping
-from typing import Dict, List, Tuple, Any, TypeVar, Optional, Set
+import copy
+import warnings
 
-from rest_framework.serializers import SerializerMetaclass, ALL_FIELDS, IntegerField
+from collections.abc import Mapping
+from typing import Dict, List, Tuple, Any, TypeVar, Optional, Set, Iterable
+
+from rest_framework.serializers import (
+    SerializerMetaclass,
+    BaseSerializer,
+    ModelSerializer,
+    ALL_FIELDS,
+    IntegerField,
+)
 from rest_framework.exceptions import ValidationError
 
 from .mixins import NestedCreateUpdateMixin
 from .utils import update_error_dict
 
 
-__all__ = ["ExtendedSerializerMetaclass", "InheritableExtendedSerializerMetaclass"]
+__all__ = [
+    "NestedCreateUpdateMetaclass",
+    "ExtendedSerializerMetaclass",
+    "InheritableExtendedSerializerMetaclass",
+]
 
 
 NON_FIELD_ERRORS_KEY = "__all__"
@@ -42,6 +55,77 @@ def _get_meta_fields(cls_name: str, cls_attrs: Dict[str, Any]) -> Iterable:
         ) from None
 
     return meta_fields
+
+
+class NestedCreateUpdateMetaclass(SerializerMetaclass):
+    """Metaclass to:
+    - transparently add `_pk` field to all nested serializers
+    - provide writing capabilities for nested serializers, both while
+      creating and updating (via transparently adding the `NestedCreateUpdateMixin`
+      into the bases of the created serializer class).
+    """
+
+    def __new__(
+        metacls: type, cls_name: str, bases: Tuple, attrs: Dict[str, Any]
+    ) -> "NestedCreateUpdateMetaclass":
+
+        _get_meta_fields(cls_name, attrs)
+
+        # Inject `_pk` field to all nested serializers
+        for attr, value in attrs.items():
+            if isinstance(value, BaseSerializer):
+
+                if not isinstance(value, ModelSerializer):
+                    warnings.warn(
+                        f"{value} is a `BaseSerializer` instance but not a "
+                        "`ModelSerializer`, not going to add `_pk` field here."
+                    )
+                    continue
+
+                # Keep the declared serializer as-is; work on a copy and
+                # set the new one as the serializer eventually
+                serializer = copy.deepcopy(value)
+                serializer.__class__._declared_fields.update(
+                    _pk=IntegerField(
+                        write_only=True,
+                        required=False,
+                        min_value=0,
+                        help_text=(
+                            "This *write-only* field is used for differentiating "
+                            "between `create` and `update` operations of nested "
+                            "serializers. And must refer to a valid primary key "
+                            "for the relevant nested serializer model to indicate "
+                            "that the operation on nested serializer is an `update` "
+                            "of the object referred by the given primary key. "
+                            "Otherwise, a `create` operation is performed."
+                        ),
+                    )
+                )
+
+                serializer_meta_fields = serializer.Meta.fields
+
+                # When `Meta.fields` is `__all__`, the `_pk` field
+                # is added via `get_default_field_names` method
+                if serializer_meta_fields == ALL_FIELDS:
+                    get_default_field_names_orig = serializer.get_default_field_names
+
+                    def get_default_field_names(*args, **kwargs):
+                        default_fields = get_default_field_names_orig(*args, **kwargs)
+                        return default_fields + ["_pk"]
+
+                    serializer.get_default_field_names = get_default_field_names
+                else:
+                    serializer.__class__.Meta.fields = tuple(serializer_meta_fields) + (
+                        "_pk",
+                    )
+
+                attrs[attr] = serializer
+
+        # `NestedCreateUpdateMixin` should be the first superclass
+        bases = (NestedCreateUpdateMixin,) + bases
+
+        return super().__new__(metacls, cls_name, bases, attrs)  # type: ignore
+
 
     """Custom SerializerMetaclass to:
     - provide two `Meta` options to do `required` field validations:
