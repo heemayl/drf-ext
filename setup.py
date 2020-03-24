@@ -40,6 +40,7 @@ setup(
     packages=find_packages(),
     python_requires=">=3.6",
     install_requires=["djangorestframework"],
+    extras_require={"dev": ["pytest-django", "factory-boy"]},
     project_urls={
         "Bug Reports": "https://github.com/heemayl/drf-ext/issues",
         "Source": "https://github.com/heemayl/drf-ext",
