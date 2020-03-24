@@ -19,6 +19,18 @@
 
 ---
 
+# Development:
+
+- Install `dev` dependencies:
+
+	pip install drf-ext[dev]
+
+- Run tests:
+
+	drf_ext/tests$ PYTHONPATH=.. pytest
+
+---
+
 ## License:
 
 #### MIT
