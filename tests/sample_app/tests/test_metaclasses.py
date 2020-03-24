@@ -489,3 +489,31 @@ class TestFieldOptionsMetaclass:
             assert extra_kwargs["zip_code"]
 
 
+class TestExtendedSerializerMetaclass:
+    def test_types(self):
+        class Serializer(metaclass=ExtendedSerializerMetaclass):
+            class Meta:
+                fields = "__all__"
+
+        assert isinstance(Serializer, NestedCreateUpdateMetaclass)
+        assert isinstance(Serializer, FieldOptionsMetaclass)
+
+
+class TestInheritableExtendedSerializerMetaclass:
+    def test_declared_fields(self):
+        class AddressSerializerSuperClass:
+            state = serializers.IntegerField()  # shadowing default `CharField`
+
+        class AddressSerializer(
+            AddressSerializerSuperClass,
+            serializers.ModelSerializer,
+            metaclass=InheritableExtendedSerializerMetaclass,
+        ):
+            class Meta:
+                model = Address
+                fields = "__all__"
+
+        assert "state" in AddressSerializer._declared_fields
+
+        state_field = AddressSerializer._declared_fields["state"]
+        assert isinstance(state_field, serializers.IntegerField)
