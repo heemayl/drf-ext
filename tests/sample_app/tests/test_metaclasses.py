@@ -16,7 +16,6 @@ from drf_ext.metaclasses import (
     NON_FIELD_ERRORS_KEY,
 )
 
-from drf_ext.mixins import NestedCreateUpdateMixin
 from drf_ext.utils import exc_dict_has_keys
 
 from sample_app.models import Address, Client
