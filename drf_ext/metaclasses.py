@@ -25,6 +25,7 @@ from .utils import update_error_dict
 
 __all__ = [
     "NestedCreateUpdateMetaclass",
+    "FieldOptionsMetaclass",
     "ExtendedSerializerMetaclass",
     "InheritableExtendedSerializerMetaclass",
 ]
@@ -127,8 +128,8 @@ class NestedCreateUpdateMetaclass(SerializerMetaclass):
         return super().__new__(metacls, cls_name, bases, attrs)  # type: ignore
 
 
-class ExtendedSerializerMetaclass(NestedCreateUpdateMetaclass):
-    """Custom SerializerMetaclass to:
+class FieldOptionsMetaclass(SerializerMetaclass):
+    """Custom Serializer Metaclass to:
     - provide two `Meta` options to do `required` field validations:
       - `required_fields_on_create`
       - `required_fields_on_update`
@@ -160,7 +161,7 @@ class ExtendedSerializerMetaclass(NestedCreateUpdateMetaclass):
                           'allow_blank: False,
                       },
                   }
-    - provide nested create/update (via `NestedCreateUpdateMetaclass`)
+
     """
 
     def __new__(
@@ -310,6 +311,17 @@ class ExtendedSerializerMetaclass(NestedCreateUpdateMetaclass):
         return cls
 
 
+class ExtendedSerializerMetaclass(NestedCreateUpdateMetaclass, FieldOptionsMetaclass):
+    """Custom SerializerMetaclass to combine the functionalities
+    provided by the `NestedCreateUpdateMetaclass` and
+    `FieldOptionsMetaclass` metaclasses.
+
+    See the docstrings of those metaclasses.
+    """
+
+    pass
+
+
 class InheritableExtendedSerializerMetaclass(ExtendedSerializerMetaclass):
     """Custom metaclass to include all the attributes
     defined in superclasses (ignoring the dunder and
@@ -317,7 +329,18 @@ class InheritableExtendedSerializerMetaclass(ExtendedSerializerMetaclass):
 
     This is designed to be used instead of `CustomSerializerMetaclass`
     when a (common) base class contains field definitions
-    that are to be inherited by all child classes.
+    that are to be inherited by all child classes. For example:
+
+    class Common:
+        field = serializers.IntegerField()
+
+    class Serializer(
+        serializers.ModelSerializer,
+        metaclass=InheritableExtendedSerializerMetaclass
+    ):
+        # `field` will be injected here like it were defined
+        # on this class body.
+        ...
     """
 
     def __new__(metacls, cls_name, bases, attrs):
