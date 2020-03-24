@@ -1,5 +1,6 @@
 """All standalone utilities."""
 
+import logging
 
 from typing import Dict, List, TypeVar, Union, Iterable
 
@@ -11,6 +12,14 @@ __all__ = [
     "exc_dict_has_keys",
     "get_request_user_on_serializer",
 ]
+
+
+# Default logger for `drf_ext`
+logger = logging.getLogger("drf_ext")
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+logger.addHandler(handler)
 
 
 # Custom type hint(s)
