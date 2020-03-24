@@ -5,7 +5,6 @@ functionalities of serializers.
 # mypy: ignore-errors
 
 import copy
-import warnings
 
 from collections.abc import Mapping
 from typing import Dict, List, Tuple, Any, TypeVar, Optional, Set, Iterable
@@ -20,7 +19,7 @@ from rest_framework.serializers import (
 from rest_framework.exceptions import ValidationError
 
 from .mixins import NestedCreateUpdateMixin
-from .utils import update_error_dict
+from .utils import update_error_dict, logger
 
 
 __all__ = [
@@ -77,7 +76,7 @@ class NestedCreateUpdateMetaclass(SerializerMetaclass):
             if isinstance(value, BaseSerializer):
 
                 if not isinstance(value, ModelSerializer):
-                    warnings.warn(
+                    logger.info(
                         f"{value} is a `BaseSerializer` instance but not a "
                         "`ModelSerializer`, not going to add `_pk` field here."
                     )
@@ -191,7 +190,14 @@ class FieldOptionsMetaclass(SerializerMetaclass):
         # Defaults to `fields`
         except AttributeError:
             # TODO: Populate fields when `Meta.fields == '__all__'`
-            non_required_fields = () if Meta.fields == ALL_FIELDS else Meta.fields
+            if Meta.fields == ALL_FIELDS:
+                logger.info(
+                    "`non_required_fields` is not supported "
+                    "currently when `fields == '__all__'`."
+                )
+                non_required_fields = ()
+            else:
+                non_required_fields = Meta.fields
 
         non_required_fields = tuple(non_required_fields) + ("_pk",)
         for field in non_required_fields:
