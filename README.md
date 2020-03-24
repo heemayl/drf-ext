@@ -23,11 +23,11 @@
 
 - Install `dev` dependencies:
 
-	pip install drf-ext[dev]
+		pip install drf-ext[dev]
 
 - Run tests:
 
-	drf_ext/tests$ PYTHONPATH=.. pytest
+		drf_ext/tests$ PYTHONPATH=.. pytest
 
 ---
 
