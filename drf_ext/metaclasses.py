@@ -333,7 +333,7 @@ class InheritableExtendedSerializerMetaclass(ExtendedSerializerMetaclass):
     defined in superclasses (ignoring the dunder and
     `Meta` attributes, and callables).
 
-    This is designed to be used instead of `CustomSerializerMetaclass`
+    This is designed to be used instead of `ExtendedSerializerMetaclass`
     when a (common) base class contains field definitions
     that are to be inherited by all child classes. For example:
 
