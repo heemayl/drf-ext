@@ -163,7 +163,9 @@ class NestedCreateUpdateMixin:
                     }
                 ) from None
             else:
-                serializer = field_obj.__class__(instance, data=field_data)
+                valid_field_data = _get_sanitized_m2m_data(field_data)
+
+                serializer = field_obj.__class__(instance, data=valid_field_data)
                 serializer.is_valid(raise_exception=True)
                 instance = serializer.save()
 
