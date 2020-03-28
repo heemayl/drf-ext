@@ -61,6 +61,11 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+class Tag(models.Model):
+
+	name = models.CharField(max_length=12)
+
+
 class Address(models.Model):
 
 	user = models.OneToOneField(
@@ -70,6 +75,8 @@ class Address(models.Model):
 		null=True,
 		blank=True,
 	)
+	tags = models.ManyToManyField(Tag, related_name="addresses", blank=True)
+
 	state = models.CharField(max_length=2)
 	zip_code = models.CharField(max_length=12)
 
@@ -126,7 +133,8 @@ data = {
 	"password": "my_password",
 	"address": {
 		"state": "CA",
-		"zip_code": "12345"
+		"zip_code": "12345",
+		"tags": [1, 3, 7]  # `pk` of `Tag` objects
 	}
 }
 
@@ -142,7 +150,8 @@ data = {
 	"address": {
 		"_pk": 2,  # `pk` of the related `address`
 		"state": "CA",
-		"zip_code": "12345"
+		"zip_code": "12345",
+		"tags": [9, 24, 56]
 	}
 }
 
