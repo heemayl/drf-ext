@@ -41,6 +41,15 @@ class AddressFactory(factory.django.DjangoModelFactory):
     state = factory.fuzzy.FuzzyChoice(US_STATE_CHOICES, getter=lambda row: row[0])
     zip_code = Faker("zipcode")
 
+    @factory.post_generation
+    def tags(self, create, extracted, **kwargs):
+        if not create:
+            return None
+
+        if extracted:
+            for tag in extracted:
+                self.tags.add(tag)
+
     class Meta:
         model = Address
 
@@ -59,15 +68,6 @@ class UserFactory(factory.django.DjangoModelFactory):
 class ClientFactory(factory.django.DjangoModelFactory):
 
     user = factory.SubFactory(UserFactory)
-
-    @factory.post_generation
-    def tags(self, create, extracted, **kwargs):
-        if not create:
-            return None
-
-        if extracted:
-            for tag in extracted:
-                self.tags.add(tag)
 
     class Meta:
         model = Client
