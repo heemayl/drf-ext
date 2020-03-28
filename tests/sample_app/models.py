@@ -7,10 +7,10 @@ class Address(models.Model):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="address", null=True, blank=True
     )
+    tags = models.ManyToManyField("Tag", related_name="addresses", blank=True)
+
     state = models.CharField(max_length=2)
     zip_code = models.CharField(max_length=12)
-
-    tags = models.ManyToManyField("Tag", related_name="addresses", blank=True)
 
 
 class Client(models.Model):
