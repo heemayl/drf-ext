@@ -9,6 +9,7 @@ import traceback
 from collections.abc import Mapping
 from typing import Dict, List, Tuple, Any, Union, TypeVar
 
+from django.db import models
 from django.core.exceptions import ValidationError as django_ValidationError
 from rest_framework.serializers import BaseSerializer
 from rest_framework.utils import model_meta
@@ -25,6 +26,35 @@ SerializerInstance = TypeVar("SerializerInstance")  # refers to a serializer ins
 
 
 NON_FIELD_ERRORS_KEY = "__all__"
+
+
+def _get_sanitized_m2m_data(
+    field_data: Dict[str, Union[str, int, List, Dict]]
+) -> Dict[str, Union[str, int, List, Dict]]:
+    """Take a serializer input field data, and return
+    valid field data from that replacing all M2M objects
+    with their PKs. For example:
+
+      {...: {...: [<Foo_1>, <Foo_2>, <Foo_3>]}} ->
+      {...: {...: [1, 2, 3]}}
+
+    This handles nested data as well by recursion.
+    """
+
+    valid_field_data = {}
+
+    for key, value in field_data.items():
+        if isinstance(value, list):
+            value = [
+                item.pk if isinstance(item, models.Model) else item for item in value
+            ]
+            valid_field_data[key] = value
+        if isinstance(value, dict):
+            value = _get_sanitized_m2m_data(value)
+
+        valid_field_data[key] = value
+
+    return valid_field_data
 
 
 class NestedCreateUpdateMixin:
@@ -109,7 +139,14 @@ class NestedCreateUpdateMixin:
             serializer = field_obj.child if hasattr(field_obj, "child") else field_obj
             serializer_cls = serializer.__class__
 
-            serializer = serializer_cls(data=field_data)
+            # Convert all M2M objects to their PKs
+            # It can also be done by overriding
+            # `ListSerializer.to_internal_value` but that would
+            # require to use the metaclass. As we want to keep
+            # this mixin public, doing the normalization here.
+            valid_field_data = _get_sanitized_m2m_data(field_data)
+
+            serializer = serializer_cls(data=valid_field_data)
             serializer.is_valid(raise_exception=True)
             instance = serializer.save()
         else:
