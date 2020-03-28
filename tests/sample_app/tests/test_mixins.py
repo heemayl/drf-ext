@@ -171,6 +171,27 @@ class TestNestedCreateUpdateMixin:
         assert user.address.state == address_data["state"]
         assert user.address.zip_code == address_data["zip_code"]
 
+    def test_depth_1_nested_serializer_valid_data_on_update_with_m2m_field(self, tags):
+        old_tags = tags[:4]
+        new_tags = tags[4:]
+        user = UserFactory.create()
+        user.address.tags.set(old_tags)
+        address_pk = user.address.pk
+
+        address_data = dict(
+            _pk=address_pk,
+            tags=[tag.pk for tag in new_tags],
+            state=user.address.state,  # required
+            zip_code=user.address.zip_code,  # required
+        )
+        user_data = dict(address=address_data)
+
+        serializer = UserSerializer(user, data=user_data)
+        assert serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        assert [*user.address.tags.all()] == new_tags
+
     def test_depth_2_nested_serializer_valid_data_on_update(self, db):
         client = ClientFactory.create()
         user = client.user
@@ -184,9 +205,9 @@ class TestNestedCreateUpdateMixin:
 
         address_data = dict(_pk=address_pk, state="NJ", zip_code="34567")
         user_data = dict(_pk=user_pk, username="spamegg", address=address_data)
-        requester_data = dict(user=user_data)
+        client_data = dict(user=user_data)
 
-        serializer = ClientSerializer(client, data=requester_data)
+        serializer = ClientSerializer(client, data=client_data)
         assert serializer.is_valid(raise_exception=True)
         client = serializer.save()
         user = client.user
@@ -194,6 +215,31 @@ class TestNestedCreateUpdateMixin:
         assert user.username == user_data["username"]
         assert user.address.state == address_data["state"]
         assert user.address.zip_code == address_data["zip_code"]
+
+    def test_depth_2_nested_serializer_valid_data_on_update_with_m2m_field(self, tags):
+        old_tags = tags[:2]
+        new_tags = tags[2:]
+
+        client = ClientFactory.create()
+        user = client.user
+        user.address.tags.set(old_tags)
+        user_pk = user.pk
+        address_pk = user.address.pk
+
+        address_data = dict(
+            _pk=address_pk,
+            tags=[tag.pk for tag in new_tags],
+            state=user.address.state,
+            zip_code=user.address.zip_code,
+        )
+        user_data = dict(_pk=user_pk, address=address_data)
+        client_data = dict(user=user_data)
+
+        serializer = ClientSerializer(client, data=client_data)
+        assert serializer.is_valid(raise_exception=True)
+        client = serializer.save()
+
+        assert [*client.user.address.tags.all()] == new_tags
 
     def test_depth_1_nested_serializer_invalid_data_on_update(self, db):
         user = UserFactory.create()
