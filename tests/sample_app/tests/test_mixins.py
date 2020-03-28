@@ -19,7 +19,7 @@ class AddressSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Address
-        fields = ("pk", "_pk", "state", "zip_code")
+        fields = ("pk", "_pk", "state", "zip_code", "tags")
         read_only_fields = ("pk",)
 
 
@@ -57,6 +57,17 @@ class TestNestedCreateUpdateMixin:
         assert user.username == user_data["username"]
         assert user.address.zip_code == address_data["zip_code"]
 
+    def test_depth_1_nested_serializer_valid_data_on_create_with_m2m_field(self, tags):
+        tags_pk = [tag.pk for tag in tags]
+        address_data = dict(state="CA", zip_code="12345", tags=tags_pk)
+        user_data = dict(username="username", password="password")
+        user_data.update(address=address_data)
+
+        serializer = UserSerializer(data=user_data)
+        assert serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        assert [*user.address.tags.all()] == tags
+
     def test_depth_2_nested_serializer_valid_data_on_create(self, db):
         address_data = dict(state="CA", zip_code="12345")
         user_data = dict(username="username", password="password")
@@ -68,6 +79,19 @@ class TestNestedCreateUpdateMixin:
         client = serializer.save()
         assert client.user.username == user_data["username"]
         assert client.user.address.zip_code == address_data["zip_code"]
+
+    def test_depth_2_nested_serializer_valid_data_on_create_with_m2m_field(self, tags):
+        tags = tags[:3]
+        tags_pk = [tag.pk for tag in tags]
+        address_data = dict(state="CA", zip_code="12345", tags=tags_pk)
+        user_data = dict(username="username", password="password")
+        user_data.update(address=address_data)
+        client_data = dict(user=user_data)
+
+        serializer = ClientSerializer(data=client_data)
+        assert serializer.is_valid(raise_exception=True)
+        client = serializer.save()
+        assert [*client.user.address.tags.all()] == tags
 
     def test_depth_1_nested_serializer_invalid_data_on_create(self, db):
         address_data = dict(state="CA", zip_code="12345")
