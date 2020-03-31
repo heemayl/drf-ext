@@ -187,17 +187,18 @@ class FieldOptionsMetaclass(SerializerMetaclass):
         # `non_required_fields`
         try:
             non_required_fields = Meta.non_required_fields
-        # Defaults to `fields`
+        # Defaults to `get_fields`
         except AttributeError:
-            # TODO: Populate fields when `Meta.fields == '__all__'`
-            if Meta.fields == ALL_FIELDS:
-                logger.info(
-                    "`non_required_fields` is not supported "
-                    "currently when `fields == '__all__'`."
-                )
-                non_required_fields = ()
-            else:
-                non_required_fields = Meta.fields
+            _instance = cls()
+
+            try:
+                _fields = _instance.get_fields()
+            except AttributeError:
+                raise TypeError(
+                    "`ModelSerializer` must be one the base classes."
+                ) from None
+
+            non_required_fields = tuple(_fields)
 
         non_required_fields = tuple(non_required_fields) + ("_pk",)
         for field in non_required_fields:
