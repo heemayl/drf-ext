@@ -361,10 +361,6 @@ class TestFieldOptionsMetaclass:
         assert serializer.is_valid(raise_exception=False)
 
     def test_non_required_fields_from_fields_eq___all__(self):
-        """Currently, `non_required_fields` is not
-        supported when `Meta.fields` is `__all__`.
-        """
-
         class AddressSerializer(
             serializers.ModelSerializer, metaclass=FieldOptionsMetaclass
         ):
@@ -374,8 +370,7 @@ class TestFieldOptionsMetaclass:
                 read_only_fields = ("pk",)
 
         serializer = AddressSerializer(data={})
-        with pytest.raises(ValidationError):
-            serializer.is_valid(raise_exception=True)
+        assert serializer.is_valid(raise_exception=True)
 
     def test_non_required_fields_empty(self):
         # Need to use a required field i.e. either an explicitly
@@ -490,9 +485,12 @@ class TestFieldOptionsMetaclass:
 
 class TestExtendedSerializerMetaclass:
     def test_types(self):
-        class Serializer(metaclass=ExtendedSerializerMetaclass):
+        class Serializer(
+            serializers.ModelSerializer, metaclass=ExtendedSerializerMetaclass
+        ):
             class Meta:
                 fields = "__all__"
+                model = Address
 
         assert isinstance(Serializer, NestedCreateUpdateMetaclass)
         assert isinstance(Serializer, FieldOptionsMetaclass)
