@@ -258,9 +258,9 @@ class AddressSerializer(serializers.ModelSerializer, metaclass=FieldOptionsMetac
 ```
 
 **NOTE:** If `non_required_fields` is not provided, all fields mentioned
-in `fields` (except `fields` is set to string `__all__`) are made
-*non-required*. To use the default option of DRF, one can set
-`non_required_fields` to an empty iterable e.g.:
+in `fields` (without `exclude`-ed ones) are made *non-required*. To use
+the default option of DRF, one can set `non_required_fields` to an empty
+iterable e.g.:
 
 ```python
 
